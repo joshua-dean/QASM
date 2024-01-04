@@ -7,14 +7,14 @@ import os
 import bs4
 import boto3
 from pathlib import Path
+from os import PathLike
+from argparse import Namespace
+from typing import TypedDict, Literal, get_args
 
 ENV_KEY = "REACT_APP_QASM_MODE"
 REQUIRED_QASM_KEYS = ["app", "components"]
 REQUIRED_S3_KEYS = ["bucket"]
 REQUIRED_PUSH_KEYS = ["static_site_bucket"]
-QASM_COMPONENTS = ["home", "grid", "multiclassgrid", "binaryeditor", "imagelabeler"]
-QASM_MODES = ["local", "s3"]
-RUN_MODES = ["dev", "build-exe", "push"]
 APP_NAME_KEY = "name"
 INTERCEPT_S3_PROTOCOL_KEY = "intercept_s3_protocol"
 
@@ -27,13 +27,34 @@ CONFIG_DEST_PATH = FRONTEND_ROOT_DIR / "config.json"
 CONFIG_DUP_PATH = FRONTEND_ROOT_DIR / "config-dup.json"
 DEFAULT_CONFIG_PATH = FRONTEND_ROOT_DIR / "default-config.json"
 
+class QASMComponent(TypedDict):
+    """QASM component specification."""
+    component: Literal["home", "grid", "multiclassgrid", "binaryeditor", "imagelabeler"]
+    # Additional configuration is component-specific
+
+class QASMConfig(TypedDict):
+    """QASM configuration."""
+    name: str
+    app: Literal["local", "s3"]
+    bucket: str
+    static_site_bucket: str
+    
+    components: list[QASMComponent]
+
+class QASMArgs(Namespace):
+    """QASM main entrypoint arguments."""
+    config: QASMConfig
+    mode: Literal["dev", "build-exe", "push"]
+    config_path: PathLike
+    
+
 def main():
     """Start QASM app using a custom or default configuration."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=None, help="Stringified config json.")
     parser.add_argument("--mode", default="dev", help="Production environment.")
     parser.add_argument("--config_path", default=None, help="Path to config json.")
-    args = parser.parse_args()
+    args: QASMArgs = parser.parse_args()
    
     # Parse configuration
     try: 
@@ -63,8 +84,9 @@ def main():
         print(e)
         return
 
-    if args.mode not in RUN_MODES:
-        raise ValueError(f"Enter a valid run mode: {RUN_MODES}")
+    valid_run_modes = get_args(QASMArgs.mode)
+    if args.mode not in valid_run_modes:
+        raise ValueError(f"Enter a valid run mode: {valid_run_modes}")
     
     if args.mode == "push" and any(key not in config for key in REQUIRED_PUSH_KEYS):
         raise ValueError(f"Missing required key(s) for push: {REQUIRED_PUSH_KEYS}")
@@ -76,8 +98,9 @@ def main():
     will_break = False
     for component in config["components"]:
         component_name = component["component"]
-        if component_name not in QASM_COMPONENTS:
-            print(f"{component_name} is an unrecognized component. Use only the following: {QASM_COMPONENTS}")
+        valid_components = get_args(QASMComponent.component)
+        if component_name not in valid_components:
+            print(f"{component_name} is an unrecognized component. Use only the following: {valid_components}")
             will_break = True
     if will_break:
         return
@@ -107,11 +130,11 @@ def main():
             f.write(str(soup))
             f.truncate()
 
-    app = config["app"]
+    qasm_mode = config["app"]
     # Intercept s3 protocol
     if INTERCEPT_S3_PROTOCOL_KEY in config and config[INTERCEPT_S3_PROTOCOL_KEY]:
         # Only valid for s3 mode
-        if app == "s3":
+        if qasm_mode == "s3":
             with open(PACKAGE_JSON_PATH, "r+") as f:
                 package_json = json.load(f)
                 package_json["build"]["protocols"] = {
@@ -125,11 +148,12 @@ def main():
             print(f"WARNING: {INTERCEPT_S3_PROTOCOL_KEY} is only valid for 's3' app mode, ignoring...")
     
     
-    if (app in QASM_MODES):
-        if (app == "s3" and any(key not in config for key in REQUIRED_S3_KEYS)):
-            raise ValueError(f"Missing required key(s) for {app} app: {REQUIRED_S3_KEYS}")
+    valid_qasm_modes = get_args(QASMConfig.app)
+    if (qasm_mode in valid_qasm_modes):
+        if (qasm_mode == "s3" and any(key not in config for key in REQUIRED_S3_KEYS)):
+            raise ValueError(f"Missing required key(s) for {qasm_mode} app: {REQUIRED_S3_KEYS}")
             
-        print(f"Setup successful, starting {app} app in {args.mode} mode...")
+        print(f"Setup successful, starting {qasm_mode} app in {args.mode} mode...")
         if args.mode == "push":
             # Setup static site bucket
             bucket_url = setup_static_site_bucket(bucket_name=config["static_site_bucket"])
@@ -148,7 +172,7 @@ def main():
                 cwd=FRONTEND_ROOT_DIR
             )
     else:
-        raise NotImplementedError(f"{app} runtime not yet implemented. Use: {QASM_MODES}")
+        raise NotImplementedError(f"{qasm_mode} runtime not yet implemented. Use: {valid_qasm_modes}")
 
 
 def setup_static_site_bucket(bucket_name: str) -> str:
