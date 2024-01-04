@@ -1,3 +1,4 @@
+"""QASM entrypoint."""
 import json
 import argparse
 import subprocess
@@ -5,6 +6,7 @@ import shutil
 import os
 import bs4
 import boto3
+from pathlib import Path
 
 ENV_KEY = "REACT_APP_QASM_MODE"
 REQUIRED_QASM_KEYS = ["app", "components"]
@@ -15,12 +17,15 @@ QASM_MODES = ["local", "s3"]
 RUN_MODES = ["dev", "build-exe", "push"]
 APP_NAME_KEY = "name"
 INTERCEPT_S3_PROTOCOL_KEY = "intercept_s3_protocol"
-PACKAGE_JSON_PATH = "./package.json"
-DEFAULT_INDEX_PATH = "./public/default-index.html"
-INDEX_PATH = "./public/index.html"
-CONFIG_DEST_PATH = "./config.json"
-CONFIG_DUP_PATH = "./public/config-dup.json"
-DEFAULT_CONFIG_PATH = "./default-config.json"
+
+FRONTEND_ROOT_DIR = Path(__file__).parent
+print(f"FRONTEND_ROOT_DIR: {FRONTEND_ROOT_DIR}")
+PACKAGE_JSON_PATH = FRONTEND_ROOT_DIR / "package.json"
+DEFAULT_INDEX_PATH = FRONTEND_ROOT_DIR / "public/default-index.html"
+INDEX_PATH = FRONTEND_ROOT_DIR / "public/index.html"
+CONFIG_DEST_PATH = FRONTEND_ROOT_DIR / "config.json"
+CONFIG_DUP_PATH = FRONTEND_ROOT_DIR / "config-dup.json"
+DEFAULT_CONFIG_PATH = FRONTEND_ROOT_DIR / "default-config.json"
 
 def main():
     """Start QASM app using a custom or default configuration."""
@@ -131,9 +136,17 @@ def main():
             if bucket_url is None:
                 return
             # Pass npm arg. On Windows, the value of `--bucket` is accessed in the npm script as %npm_config_bucket%
-            subprocess.run(f"npm run {args.mode} --bucket={config['static_site_bucket']} --bucket_url={bucket_url}", shell=True)
+            subprocess.run(
+                f"npm run {args.mode} --bucket={config['static_site_bucket']} --bucket_url={bucket_url}",
+                shell=True,
+                cwd=FRONTEND_ROOT_DIR
+            )
         else:
-            subprocess.run(f"npm run {args.mode}", shell=True)
+            subprocess.run(
+                f"npm run {args.mode}",
+                shell=True,
+                cwd=FRONTEND_ROOT_DIR
+            )
     else:
         raise NotImplementedError(f"{app} runtime not yet implemented. Use: {QASM_MODES}")
 
