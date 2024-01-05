@@ -27,15 +27,19 @@ CONFIG_DEST_PATH = FRONTEND_ROOT_DIR / "config.json"
 CONFIG_DUP_PATH = FRONTEND_ROOT_DIR / "config-dup.json"
 DEFAULT_CONFIG_PATH = FRONTEND_ROOT_DIR / "default-config.json"
 
+COMPONENT_TYPE = Literal["home", "grid", "multiclassgrid", "binaryeditor", "imagelabeler"]
+QASM_APP_TYPE = Literal["local", "s3"]
+QASM_MODE = Literal["dev", "build-exe", "push"]
+
 class QASMComponent(TypedDict):
     """QASM component specification."""
-    component: Literal["home", "grid", "multiclassgrid", "binaryeditor", "imagelabeler"]
+    component: COMPONENT_TYPE
     # Additional configuration is component-specific
 
 class QASMConfig(TypedDict):
     """QASM configuration."""
     name: str
-    app: Literal["local", "s3"]
+    app: QASM_APP_TYPE
     bucket: str
     static_site_bucket: str
     
@@ -44,7 +48,7 @@ class QASMConfig(TypedDict):
 class QASMArgs(Namespace):
     """QASM main entrypoint arguments."""
     config: QASMConfig
-    mode: Literal["dev", "build-exe", "push"]
+    mode: QASM_MODE
     config_path: PathLike
     
 
@@ -84,7 +88,7 @@ def main():
         print(e)
         return
 
-    valid_run_modes = get_args(QASMArgs.mode)
+    valid_run_modes = get_args(QASM_MODE)
     if args.mode not in valid_run_modes:
         raise ValueError(f"Enter a valid run mode: {valid_run_modes}")
     
@@ -98,7 +102,7 @@ def main():
     will_break = False
     for component in config["components"]:
         component_name = component["component"]
-        valid_components = get_args(QASMComponent.component)
+        valid_components = get_args(COMPONENT_TYPE)
         if component_name not in valid_components:
             print(f"{component_name} is an unrecognized component. Use only the following: {valid_components}")
             will_break = True
@@ -148,7 +152,7 @@ def main():
             print(f"WARNING: {INTERCEPT_S3_PROTOCOL_KEY} is only valid for 's3' app mode, ignoring...")
     
     
-    valid_qasm_modes = get_args(QASMConfig.app)
+    valid_qasm_modes = get_args(QASM_APP_TYPE)
     if (qasm_mode in valid_qasm_modes):
         if (qasm_mode == "s3" and any(key not in config for key in REQUIRED_S3_KEYS)):
             raise ValueError(f"Missing required key(s) for {qasm_mode} app: {REQUIRED_S3_KEYS}")
