@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { local_env } from "./constants.js"
 
-/**
+/** 
  * Hit a terraform API endpoint and return the response.
  * 
  * @param {*} params Params to pass to the API
@@ -13,12 +13,22 @@ export async function hit_terraform_api(params, endpoint) {
     if (endpoint[0] === "/") {
         endpoint = endpoint.slice(1);
     }
+    console.log("potatoe");
+    console.log(local_env.API_URL);
 
-    return await axios({
+    let resp = await axios({
         method: "post",
         url: local_env.API_URL + endpoint,
         data: params,
-    })
+    }).catch((error) => {
+        // Steamroll
+        console.log(error);
+        return {
+            'data': []
+        }
+    });
+    return resp;
+
 }
 
 /**

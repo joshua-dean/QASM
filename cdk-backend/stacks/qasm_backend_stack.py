@@ -1,19 +1,25 @@
 from aws_cdk import (
-    # Duration,
     Stack,
-    # aws_sqs as sqs,
+    aws_s3 as s3
 )
 from constructs import Construct
 
 class QASMBackendStack(Stack):
+    """QASM backend stack."""
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(
+        self,
+        scope: Construct,
+        construct_id: str,
+        **kwargs
+    ) -> None:
+        """Init."""
         super().__init__(scope, construct_id, **kwargs)
-
-        # The code that defines your stack goes here
-
-        # example resource
-        # queue = sqs.Queue(
-        #     self, "CdkBackendQueue",
-        #     visibility_timeout=Duration.seconds(300),
-        # )
+        
+        # Lambda bucket
+        self.lambda_bucket = s3.Bucket(
+            self,
+            "LambdaBucket",
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL
+        )
+        
