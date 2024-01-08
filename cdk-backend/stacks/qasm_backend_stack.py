@@ -1,3 +1,5 @@
+"""QASM Backend stack."""
+import aws_cdk as cdk
 from aws_cdk import (
     Stack,
     aws_s3 as s3,
@@ -40,4 +42,10 @@ class QASMBackendStack(Stack):
             auto_deploy=True,
             http_api=self.lambda_api,
         )
-        self.lambda_api_url = self.lambda_api.url
+        
+        self.env_output = cdk.CfnOutput(
+            self,
+            "LambdaAPIURLOutput",
+            value=self.lambda_api.url,
+            description="Lambda API URL",   
+        )

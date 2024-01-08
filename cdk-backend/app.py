@@ -11,11 +11,5 @@ qasm_backend_stack = QASMBackendStack(
     "QASMBackendStack",
 )
 
-# .env file generation
-env_file_path = REPO_ROOT / "react-frontend" / "cdk.env"
-env_file_path.touch()
-env_file_path.write_text(
-    f"REACT_APP_API_URL={qasm_backend_stack.lambda_api_url}\n"
-)
-
 app.synth()
+
