@@ -1,3 +1,4 @@
+from __future__ import annotations
 import boto3
 import json
 import os
@@ -57,8 +58,13 @@ def get_cascading_dir_children(event, context):
     return get_return_block_with_cors({"data": ret})
 
 
-def get_folder_content(bucket_name, prefix) -> tuple:
+def get_folder_content(event: dict, context) -> tuple:
+    #bucket_name, prefix) -> tuple:
     """Get a tuple containing an array of a path's children files and folders."""
+    bucket_name = event.get("bucket_name", None)
+    prefix = event.get("prefix", None)
+    print(bucket_name)
+    print(prefix)
     s3 = boto3.client("s3")
     if (prefix is None) or (prefix == ""):
         response = s3.list_objects_v2(Bucket=bucket_name, Delimiter="/")

@@ -7,3 +7,4 @@ dependencies:
     - pip
     - pip:
         - aws-cdk-lib>=2.0.0
+        - aws-cdk.aws-lambda-python-alpha
