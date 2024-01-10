@@ -15,6 +15,8 @@ export async function hit_terraform_api(params, endpoint) {
     }
     console.log("potatoe");
     console.log(local_env.API_URL);
+    console.log(params)
+    console.log(endpoint)
 
     let resp = await axios({
         method: "post",

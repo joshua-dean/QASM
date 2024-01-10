@@ -23,6 +23,8 @@ class S3Browser extends Component {
         this.default_savename = window.DEFAULT_SAVENAME;
         this.loadnames = window.LOADNAMES;
         this.parents = props.parents || []; // Stack of parent folders
+        
+        console.log(this.bucket) 
 
         if (this.bucket !== undefined && this.bucket !== this.QASM.s3_bucket) {
             // Prompt user to switch buckets
@@ -679,7 +681,7 @@ class S3Browser extends Component {
             // The bucket will always be displayed, so add that first.
             navigation_info.push({
                 "name": BASE_PATH,
-                "folders": this.cache[BASE_PATH].folders.map(folder => folder.slice(0, -1)), // Remove the final character
+                "folders": this.cache[BASE_PATH].folders?.map(folder => folder.slice(0, -1)), // Remove the final character
                 "files": this.cache[BASE_PATH].files
             })
 
@@ -698,7 +700,8 @@ class S3Browser extends Component {
                 })
             }
         } 
-        catch {
+        catch (error){
+            console.log(error);
             console.log("getNavInfo Failed");
         }
         return navigation_info;

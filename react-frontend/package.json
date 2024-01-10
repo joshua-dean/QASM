@@ -1,5 +1,5 @@
 {
-  "name": "qasm-demo",
+  "name": "astrin-labeling-test",
   "author": {
     "name": "Trevor Burgoyne",
     "url": "https://github.com/TrevorBurgoyne"
@@ -78,7 +78,7 @@
     ]
   },
   "build": {
-    "productName": "QASM Demo",
+    "productName": "Astrin Labeling Test",
     "win": {
       "target": "NSIS",
       "icon": "public/icon.png"

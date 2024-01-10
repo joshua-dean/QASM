@@ -35,6 +35,7 @@ class App extends Component {
     this.QASM           = props.QASM; // QASM object
     this.config         = props.config;
     this.components     = this.config.components;
+    console.log(this.QASM)
 
     // Bind functions
     this.logoOnClick = this.logoOnClick.bind(this);

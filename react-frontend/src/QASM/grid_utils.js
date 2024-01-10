@@ -425,6 +425,7 @@ export async function selectImageDir(window, component, start_folder = undefined
         "start_folder": start_folder !== undefined ? start_folder : component.src,
         "bucket_name": bucket_name,
     }
+    console.log(params);
     let dir_path = await component.QASM.call_backend(window, function_names.OPEN_DIR_DIALOG, params);
     if (dir_path !== undefined) {
         component.src = dir_path;

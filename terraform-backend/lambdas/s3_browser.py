@@ -7,8 +7,17 @@ from pathlib import Path
 from utils.lambda_utils import get_return_block_with_cors
 from utils.s3_utils import get_all_signed_urls_in_folder, get_signed_url, get_all_subfolder_keys
 
+
 def open_dir(event, context):
     """Get info to construct a custom s3 browser."""
+    print(event)
+    print(context)
+    # test_a = event["http"]["method"] == "OPTIONS"
+    test_b = event["requestContext"]["http"]["method"] == "OPTIONS"
+    # print(test_a)
+    print(test_b)
+    if test_b:
+        return get_return_block_with_cors("Preflight response", False)
     body = json.loads(event["body"])
     bucket_name = body["bucket"]
     prefix = body["prefix"]
@@ -58,12 +67,14 @@ def get_cascading_dir_children(event, context):
     return get_return_block_with_cors({"data": ret})
 
 
-def get_folder_content(event: dict, context) -> tuple:
-    #bucket_name, prefix) -> tuple:
+# NOT a lambda handler ... probably
+def get_folder_content(
+    # event: dict, context) -> tuple:
+    bucket_name, prefix) -> tuple:
     """Get a tuple containing an array of a path's children files and folders."""
-    body: dict = json.loads(event["body"])
-    bucket_name = body.get("bucket_name", None)
-    prefix = body.get("prefix", None)
+    # body: dict = json.loads(event["body"])
+    # bucket_name = body.get("bucket_name", None)
+    # prefix = body.get("prefix", None)
     print(bucket_name)
     print(prefix)
     s3 = boto3.client("s3")
@@ -167,6 +178,7 @@ def save_image(event, context):
 
 def load_labels(event, context):
     """Load json data from an s3 path."""
+    print(event)
     body = json.loads(event["body"])
     bucket_name = body["bucket_name"]
     file_name = body["file_name"]
