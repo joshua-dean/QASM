@@ -61,8 +61,9 @@ def get_cascading_dir_children(event, context):
 def get_folder_content(event: dict, context) -> tuple:
     #bucket_name, prefix) -> tuple:
     """Get a tuple containing an array of a path's children files and folders."""
-    bucket_name = event.get("bucket_name", None)
-    prefix = event.get("prefix", None)
+    body: dict = json.loads(event["body"])
+    bucket_name = body.get("bucket_name", None)
+    prefix = body.get("prefix", None)
     print(bucket_name)
     print(prefix)
     s3 = boto3.client("s3")
