@@ -2,6 +2,7 @@ __pycache__
 .vscode
 node_modules
 terraform-backend/lambdas.zip
+tests/*
 =======
 
 #### Terraform 

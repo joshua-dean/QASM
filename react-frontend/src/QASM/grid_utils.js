@@ -421,6 +421,8 @@ export async function loadImageDir(window, component, bucket_name = undefined) {
  * @param {*} component component that called this function: pass in `this`
  */
 export async function selectImageDir(window, component, start_folder = undefined, bucket_name = undefined) {
+    console.log(window)
+    console.log(component)
     let params = {
         "start_folder": start_folder !== undefined ? start_folder : component.src,
         "bucket_name": bucket_name,

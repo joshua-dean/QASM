@@ -21,7 +21,13 @@ def get_all_subfolder_keys(bucket, subfolder_path):
 def get_signed_url(bucket_name, folder_path, image_name, s3_client=None):
     """Get a signed url for an image in an S3 subfolder."""
     if s3_client is None:
-        s3_client = boto3.client("s3", config=Config(signature_version="s3v4"))
+        s3_client = boto3.client(
+            "s3",
+            config=Config(
+                signature_version="s3v4",
+            ),
+            endpoint_url="https://s3.us-east-2.amazonaws.com",
+        )
     path_key = Path(folder_path) / image_name
     print(path_key)
     s3_params = {
@@ -38,7 +44,11 @@ def get_signed_url(bucket_name, folder_path, image_name, s3_client=None):
 def get_all_signed_urls_in_folder(bucket_name, folder_path, s3_client=None):
     """Get a dict of all signed urls in an S3 subfolder."""
     if s3_client is None:
-        s3_client = boto3.client("s3", config=Config(signature_version="s3v4"))
+        s3_client = boto3.client(
+            "s3",
+            config=Config(signature_version="s3v4"),
+            endpoint_url="https://s3.us-east-2.amazonaws.com",
+        )
     if not folder_path.endswith("/"):
         folder_path += "/"
     result = client.list_objects(Bucket=bucket_name, Prefix=folder_path, Delimiter="/")

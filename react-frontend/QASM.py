@@ -10,6 +10,7 @@ from pathlib import Path
 from os import PathLike
 from argparse import Namespace
 from typing import TypedDict, Literal, get_args
+from mypy_boto3_s3 import S3Client
 
 ENV_KEY = "REACT_APP_QASM_MODE"
 REQUIRED_QASM_KEYS = ["app", "components"]
@@ -161,6 +162,8 @@ def main():
         if args.mode == "push":
             # Setup static site bucket
             bucket_url = setup_static_site_bucket(bucket_name=config["static_site_bucket"])
+            print(bucket_url)
+            print(config["static_site_bucket"])
             if bucket_url is None:
                 return
             # Pass npm arg. On Windows, the value of `--bucket` is accessed in the npm script as %npm_config_bucket%
@@ -187,7 +190,7 @@ def setup_static_site_bucket(bucket_name: str) -> str:
         print("Static site bucket setup aborted by user.")
         return None
 
-    s3_client = boto3.client('s3')
+    s3_client: S3Client = boto3.client('s3')
     try:
         s3_client.create_bucket(Bucket=bucket_name)
         print(f"Successfully created bucket {bucket_name}...")

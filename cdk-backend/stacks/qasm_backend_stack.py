@@ -2,6 +2,7 @@
 import aws_cdk as cdk
 from aws_cdk import (
     Stack,
+    aws_iam as iam,
     aws_s3 as s3,
     aws_apigatewayv2 as apigw_v2,
     aws_apigatewayv2_integrations as apigw_v2_integrations,
@@ -18,12 +19,68 @@ class QASMBackendStack(Stack):
         """Init."""
         super().__init__(scope, construct_id, **kwargs)
         
+        ASTRIN_IP = "204.26.121.22"
+        
         # Data labeling bucket
         self.data_labeling_bucket = s3.Bucket(
             self,
             "QASMDataLabelingBucket",
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            # block_public_access=s3.BlockPublicAccess(
+            #     block_public_acls=True,
+            #     block_public_policy=False,
+            #     ignore_public_acls=True,
+            #     restrict_public_buckets=False,
+            # ),
             removal_policy=cdk.RemovalPolicy.DESTROY,
+            # public_read_access=True,
+            # cors=[
+            #     s3.CorsRule(
+            #         allowed_methods=[
+            #             s3.HttpMethods.GET,
+            #             s3.HttpMethods.PUT,
+            #             s3.HttpMethods.POST,
+            #             s3.HttpMethods.HEAD,
+            #         ],
+            #         allowed_origins=["*"],
+            #         allowed_headers=["*"],
+            #     )
+            # ]
+        )
+        # self.data_labeling_bucket.add_to_resource_policy(
+        #     permission=iam.PolicyStatement(
+        #         actions=["s3:GetObject"],
+        #         principals=[iam.AnyPrincipal()],
+        #         resources=[self.data_labeling_bucket.arn_for_objects("*")],
+        #     )
+        # )
+        # bucket policy denying access to all IPs except ASTRIN
+        # self.data_labeling_bucket.add_to_resource_policy(
+        #     statement=iam.PolicyStatement(
+        #         actions=["*"],
+        #         principals=[iam.AnyPrincipal()],
+        #         resources=[self.data_labeling_bucket.arn_for_objects("*")],
+        #         conditions={
+        #             "NotIpAddress": {
+        #                 "aws:SourceIp": ASTRIN_IP
+        #             }
+        #         }
+        #     )
+        # )
+        
+        # Static site bucket
+        self.static_site_bucket = s3.Bucket(
+            self,
+            "QASMStaticSiteBucket",
+            removal_policy=cdk.RemovalPolicy.DESTROY,
+            block_public_access=s3.BlockPublicAccess(
+                block_public_acls=True,
+                block_public_policy=True,
+                ignore_public_acls=True,
+                restrict_public_buckets=False,
+            ),
+            website_index_document="index.html",
+            website_error_document="index.html",
         )
 
         # Lambda bucket
@@ -57,12 +114,6 @@ class QASMBackendStack(Stack):
             http_api=self.lambda_api,
         )
         
-        self.env_output = cdk.CfnOutput(
-            self,
-            "QASMLambdaAPIURLOutput",
-            value=self.lambda_api.url,
-            description="Lambda API URL",   
-        )
         
         repo_root = Path(__file__).parent.parent.parent
         lambda_code_path = repo_root / "terraform-backend" / "lambdas"
@@ -110,5 +161,29 @@ class QASMBackendStack(Stack):
             )
             
             self.lambda_functions.append(lambda_fn)
+        
+        
+        self.env_outputs: list[cdk.CfnOutput] = [
+            cdk.CfnOutput(
+                self,
+                "QASMDataLabelingBucketOutput",
+                value=self.data_labeling_bucket.bucket_name,
+                description="Data labeling bucket",
+            ),
+            cdk.CfnOutput(
+                self,
+                "QASMStaticSiteBucketOutput",
+                value=self.static_site_bucket.bucket_name,
+                description="Static site bucket",
+            ),
+            cdk.CfnOutput(
+                self,
+                "QASMLambdaAPIURLOutput",
+                value=self.lambda_api.url,
+                description="Lambda API URL",   
+            ),
+        ]
+
+
         
         

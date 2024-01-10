@@ -7,17 +7,17 @@ from pathlib import Path
 from utils.lambda_utils import get_return_block_with_cors
 from utils.s3_utils import get_all_signed_urls_in_folder, get_signed_url, get_all_subfolder_keys
 
+def req_is_preflight(event) -> bool:
+    """Check if request is a preflight request."""
+    return event["requestContext"]["http"]["method"] == "OPTIONS"
 
 def open_dir(event, context):
     """Get info to construct a custom s3 browser."""
+    if req_is_preflight(event):
+        return get_return_block_with_cors("Preflight response", False)
+
     print(event)
     print(context)
-    # test_a = event["http"]["method"] == "OPTIONS"
-    test_b = event["requestContext"]["http"]["method"] == "OPTIONS"
-    # print(test_a)
-    print(test_b)
-    if test_b:
-        return get_return_block_with_cors("Preflight response", False)
     body = json.loads(event["body"])
     bucket_name = body["bucket"]
     prefix = body["prefix"]
@@ -107,10 +107,13 @@ def get_folder_content(
 
 def get_signed_urls_in_folder(event, context):
     """Get all signed urls in a folder."""
+    # if req_is_preflight(event):
+    #     return get_return_block_with_cors("Preflight response", False)
     body = json.loads(event["body"])
     bucket_name = body["bucket_name"]
     folder_name = body["folder_name"]
     urls = get_all_signed_urls_in_folder(bucket_name, folder_name)
+    print(urls)
     return get_return_block_with_cors({"urls": urls})
 
 
