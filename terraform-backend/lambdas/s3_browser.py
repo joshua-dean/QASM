@@ -107,8 +107,8 @@ def get_folder_content(
 
 def get_signed_urls_in_folder(event, context):
     """Get all signed urls in a folder."""
-    if req_is_preflight(event):
-        return get_return_block_with_cors("Preflight response", False)
+    # if req_is_preflight(event):
+    #     return get_return_block_with_cors("Preflight response", False)
     body = json.loads(event["body"])
     bucket_name = body["bucket_name"]
     folder_name = body["folder_name"]
