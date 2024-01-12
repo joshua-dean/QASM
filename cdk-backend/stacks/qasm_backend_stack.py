@@ -4,6 +4,7 @@ from aws_cdk import (
     Stack,
     aws_iam as iam,
     aws_s3 as s3,
+    aws_apigateway as apigw,
     aws_apigatewayv2 as apigw_v2,
     aws_apigatewayv2_integrations as apigw_v2_integrations,
     aws_lambda as lambda_,
@@ -27,6 +28,7 @@ class QASMBackendStack(Stack):
             self,
             "QASMDataLabelingBucket",
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            auto_delete_objects=True,
             removal_policy=cdk.RemovalPolicy.DESTROY,
         )
         
@@ -35,14 +37,16 @@ class QASMBackendStack(Stack):
             self,
             "QASMStaticSiteBucket",
             removal_policy=cdk.RemovalPolicy.DESTROY,
-            block_public_access=s3.BlockPublicAccess(
-                block_public_acls=True,
-                block_public_policy=True,
-                ignore_public_acls=True,
-                restrict_public_buckets=False,
-            ),
+            # block_public_access=s3.BlockPublicAccess(
+            #     block_public_acls=True,
+            #     block_public_policy=True,
+            #     ignore_public_acls=True,
+            #     restrict_public_buckets=False,
+            # ),
+            auto_delete_objects=True,
             website_index_document="index.html",
             website_error_document="index.html",
+            public_read_access=True
         )
 
         # Lambda bucket
@@ -53,28 +57,44 @@ class QASMBackendStack(Stack):
             removal_policy=cdk.RemovalPolicy.DESTROY
         )
 
-        self.lambda_api = apigw_v2.HttpApi(
+        self.lambda_api = apigw.RestApi(
             self,
             "QASMLambdaAPI",
-            cors_preflight=apigw_v2.CorsPreflightOptions(
-                allow_origins=["*"],
-                allow_methods=[
-                    apigw_v2.CorsHttpMethod.OPTIONS,
-                    apigw_v2.CorsHttpMethod.PUT,
-                    apigw_v2.CorsHttpMethod.POST,
-                    apigw_v2.CorsHttpMethod.GET,
-                ],
+            rest_api_name="QASMLambdaAPI",
+            description="API for QASM Lambda functions",
+            deploy_options=apigw.StageOptions(
+                stage_name="prod",
+                throttling_rate_limit=10,
+                throttling_burst_limit=100,
+            ),
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=apigw.Cors.ALL_METHODS,
                 allow_headers=["*"],
             ),
         )
+        # self.lambda_api = apigw_v2.HttpApi(
+        #     self,
+        #     "QASMLambdaAPI",
+        #     cors_preflight=apigw_v2.CorsPreflightOptions(
+        #         allow_origins=["*"],
+        #         allow_methods=[
+        #             apigw_v2.CorsHttpMethod.OPTIONS,
+        #             apigw_v2.CorsHttpMethod.PUT,
+        #             apigw_v2.CorsHttpMethod.POST,
+        #             apigw_v2.CorsHttpMethod.GET,
+        #         ],
+        #         allow_headers=["*"],
+        #     ),
+        # )
 
-        self.lambda_api_stage = apigw_v2.HttpStage(
-            self,
-            "QASMLambdaAPIStage",
-            stage_name="prod",
-            auto_deploy=True,
-            http_api=self.lambda_api,
-        )
+        # self.lambda_api_stage = apigw_v2.HttpStage(
+        #     self,
+        #     "QASMLambdaAPIStage",
+        #     stage_name="prod",
+        #     auto_deploy=True,
+        #     http_api=self.lambda_api,
+        # )
         
         
         repo_root = Path(__file__).parent.parent.parent
@@ -104,18 +124,42 @@ class QASMBackendStack(Stack):
                 index=f"{index_name}.py",
                 handler=handler,
                 runtime=lambda_.Runtime.PYTHON_3_8,
-                environment={
-                    "BUCKET_NAME": self.lambda_bucket.bucket_name,
-                },
+                # environment={
+                #     "BUCKET_NAME": self.lambda_bucket.bucket_name,
+                # },
             )
             
             self.data_labeling_bucket.grant_read_write(lambda_fn)
             
             # API Gateway integration
-            _integration = apigw_v2_integrations.HttpLambdaIntegration(
-                id=f"QASM{handler}Integration",
-                handler=lambda_fn,
+            _integration = apigw.LambdaIntegration(
+                lambda_fn,
+                proxy=False,
+                integration_responses=[
+                    apigw.IntegrationResponse(
+                        status_code="200",
+                        response_parameters={
+                            "method.response.header.Access-Control-Allow-Origin": "'*'",
+                        },
+                    ),
+                ],
             )
+            self.lambda_api.root.add_resource(handler).add_method(
+                "POST",
+                _integration,
+                method_responses=[
+                    apigw.MethodResponse(
+                        status_code="200",
+                        response_parameters={
+                            "method.response.header.Access-Control-Allow-Origin": True,
+                        },
+                    )
+                ],
+            )
+            # _integration = apigw_v2_integrations.HttpLambdaIntegration(
+            #     id=f"QASM{handler}Integration",
+            #     handler=lambda_fn,
+            # )
             """
             Setting methods to ALL or including OPTIONS
             will have preflight requests go the Lambda function.
@@ -123,11 +167,11 @@ class QASMBackendStack(Stack):
             If a function isn't designed to accomodate this (returning 200),
             then the preflight request will fail and the request will be blocked with a CORS error.
             """
-            self.lambda_api.add_routes(
-                path=f"/{handler}",
-                methods=[apigw_v2.HttpMethod.POST],
-                integration=_integration,
-            )
+            # self.lambda_api.add_routes(
+            #     path=f"/{handler}",
+            #     methods=[apigw_v2.HttpMethod.POST],
+            #     integration=_integration,
+            # )
             
             self.lambda_functions.append(lambda_fn)
         
