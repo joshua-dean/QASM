@@ -7,7 +7,8 @@ from aws_cdk import (
     aws_apigatewayv2 as apigw_v2,
     aws_apigatewayv2_integrations as apigw_v2_integrations,
     aws_lambda as lambda_,
-    aws_lambda_python_alpha as lambda_python
+    aws_lambda_python_alpha as lambda_python,
+    aws_wafv2 as wafv2,
 )
 from constructs import Construct
 from pathlib import Path
@@ -26,47 +27,8 @@ class QASMBackendStack(Stack):
             self,
             "QASMDataLabelingBucket",
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-            # block_public_access=s3.BlockPublicAccess(
-            #     block_public_acls=True,
-            #     block_public_policy=False,
-            #     ignore_public_acls=True,
-            #     restrict_public_buckets=False,
-            # ),
             removal_policy=cdk.RemovalPolicy.DESTROY,
-            # public_read_access=True,
-            # cors=[
-            #     s3.CorsRule(
-            #         allowed_methods=[
-            #             s3.HttpMethods.GET,
-            #             s3.HttpMethods.PUT,
-            #             s3.HttpMethods.POST,
-            #             s3.HttpMethods.HEAD,
-            #         ],
-            #         allowed_origins=["*"],
-            #         allowed_headers=["*"],
-            #     )
-            # ]
         )
-        # self.data_labeling_bucket.add_to_resource_policy(
-        #     permission=iam.PolicyStatement(
-        #         actions=["s3:GetObject"],
-        #         principals=[iam.AnyPrincipal()],
-        #         resources=[self.data_labeling_bucket.arn_for_objects("*")],
-        #     )
-        # )
-        # bucket policy denying access to all IPs except ASTRIN
-        # self.data_labeling_bucket.add_to_resource_policy(
-        #     statement=iam.PolicyStatement(
-        #         actions=["*"],
-        #         principals=[iam.AnyPrincipal()],
-        #         resources=[self.data_labeling_bucket.arn_for_objects("*")],
-        #         conditions={
-        #             "NotIpAddress": {
-        #                 "aws:SourceIp": ASTRIN_IP
-        #             }
-        #         }
-        #     )
-        # )
         
         # Static site bucket
         self.static_site_bucket = s3.Bucket(
@@ -168,6 +130,29 @@ class QASMBackendStack(Stack):
             )
             
             self.lambda_functions.append(lambda_fn)
+        
+        # Won't work with plain HTTP API, needs to be REST
+        # self.web_acl = wafv2.CfnWebACL(
+        #     self,
+        #     "QASMWebACL",
+        #     default_action=wafv2.CfnWebACL.DefaultActionProperty(
+        #         block={}
+        #     ),
+        #     scope="REGIONAL",
+        #     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+        #         cloud_watch_metrics_enabled=True,
+        #         metric_name="QASMWebACL",
+        #         sampled_requests_enabled=True,
+        #     ),
+        #     rules=None
+        # )
+        
+        # self.web_acl_association = wafv2.CfnWebACLAssociation(
+        #     self,
+        #     "QASMWebACLAssociation",
+        #     resource_arn=self.lambda_api.deployment_stage
+        #     web_acl_arn=self.web_acl.attr_arn
+        # )
         
         
         self.env_outputs: list[cdk.CfnOutput] = [
