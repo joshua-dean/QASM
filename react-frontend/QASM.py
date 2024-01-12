@@ -181,14 +181,39 @@ def main():
     else:
         raise NotImplementedError(f"{qasm_mode} runtime not yet implemented. Use: {valid_qasm_modes}")
 
+def get_s3_bucket_url(
+    bucket_name: str,
+    region: str = None,
+    s3_client: S3Client = None
+) -> str:
+    """
+    Get the URL of an S3 bucket with varying amounts of information provided.
+    
+    :param bucket_name: Name of the S3 bucket.
+    :param region: Region of the S3 bucket, defaults to us-east-1.
+    :param s3_client: Boto3 S3 client.
+    """
+    if not s3_client:
+        s3_client = boto3.client('s3')
+    if not region:
+        region = s3_client.get_bucket_location(Bucket=bucket_name)["LocationConstraint"] or "us-east-1"
+    
+    return f"http://{bucket_name}.s3-website-{region}.amazonaws.com"
 
 def setup_static_site_bucket(bucket_name: str) -> str:
     """Create/setup S3 bucket for static site hosting and returns the url."""
     # Create bucket if it doesn't exist
-    confirm = input(f"\n\nPROMPT: Will attempt to create/setup a public S3 bucket '{bucket_name}' for static site hosting, do you want to continue? (y/n): ")
-    if confirm.lower() not in ["y", "yes"]:
-        print("Static site bucket setup aborted by user.")
-        return None
+    options_str = "yes/no/skip (y/n/s)"
+    confirm = input(f"\n\nPROMPT: Will attempt to create/setup a public S3 bucket '{bucket_name}' for static site hosting, do you want to continue? [{options_str}]: ")
+    match confirm.lower():
+        case "n" | "no":
+            print("Static site bucket setup aborted by user.")
+            return None
+        case "s" | "skip":
+            print("Skipping static site S3 bucket setup...")
+            return get_s3_bucket_url(bucket_name=bucket_name)
+        case "y" | "yes":
+            pass
 
     s3_client: S3Client = boto3.client('s3')
     try:
@@ -243,12 +268,11 @@ def setup_static_site_bucket(bucket_name: str) -> str:
             'IndexDocument': {'Suffix': 'index.html'},
         }
     )
-
-    # If region is None, it's us-east-1
-    region = s3_client.get_bucket_location(Bucket=bucket_name)["LocationConstraint"]
-    # Get bucket url, e.g. http://my-bucket.s3-website-us-east-1.amazonaws.com
-    bucket_url = f"http://{bucket_name}.s3-website-{region if region else 'us-east-1'}.amazonaws.com"
-    return bucket_url
+    
+    return get_s3_bucket_url(
+        bucket_name=bucket_name,
+        s3_client=s3_client
+    )
 
 if __name__ == "__main__":
     main()
