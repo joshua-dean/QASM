@@ -49,7 +49,8 @@ def get_all_signed_urls_in_folder(bucket_name, folder_path, s3_client=None):
             config=Config(signature_version="s3v4"),
             endpoint_url="https://s3.us-east-2.amazonaws.com",
         )
-    if not folder_path.endswith("/"):
+    # Appending "/" to the root dir breaks, so we skip empty strings
+    if folder_path != "" and not folder_path.endswith("/"):
         folder_path += "/"
     result = client.list_objects(Bucket=bucket_name, Prefix=folder_path, Delimiter="/")
     if result.get("Contents"):

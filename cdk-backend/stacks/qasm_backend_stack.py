@@ -156,10 +156,6 @@ class QASMBackendStack(Stack):
                     )
                 ],
             )
-            # _integration = apigw_v2_integrations.HttpLambdaIntegration(
-            #     id=f"QASM{handler}Integration",
-            #     handler=lambda_fn,
-            # )
             """
             Setting methods to ALL or including OPTIONS
             will have preflight requests go the Lambda function.
@@ -167,12 +163,6 @@ class QASMBackendStack(Stack):
             If a function isn't designed to accomodate this (returning 200),
             then the preflight request will fail and the request will be blocked with a CORS error.
             """
-            # self.lambda_api.add_routes(
-            #     path=f"/{handler}",
-            #     methods=[apigw_v2.HttpMethod.POST],
-            #     integration=_integration,
-            # )
-            
             self.lambda_functions.append(lambda_fn)
         
         # Won't work with plain HTTP API, needs to be REST

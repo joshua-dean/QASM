@@ -11,13 +11,16 @@ def req_is_preflight(event) -> bool:
     """Check if request is a preflight request."""
     return event["requestContext"]["http"]["method"] == "OPTIONS"
 
-def open_dir(event, context):
+
+def open_dir(
+    event: dict,
+    context
+):
     """Get info to construct a custom s3 browser."""
     print(event)
     print(context)
-    body = json.loads(event["body"])
-    bucket_name = body["bucket"]
-    prefix = body["prefix"]
+    bucket_name = event["bucket"]
+    prefix = event["prefix"]
 
     files, folders = get_folder_content(bucket_name, prefix)
 
@@ -25,14 +28,17 @@ def open_dir(event, context):
         "files": files,
         "folders": folders
     }
-    return get_return_block_with_cors(ret)
+    return ret
+    # return get_return_block_with_cors(ret)
 
 
-def get_cascading_dir_children(event, context):
+def get_cascading_dir_children(
+    event: dict,
+    context
+):
     """Get all the children folders for all segments in an S3 path."""
-    body = json.loads(event["body"])
-    bucket_name = body["bucket"]
-    prefix = body["prefix"]
+    bucket_name = event["bucket"]
+    prefix = event["prefix"]
 
     # Create an array from the S3 path string
     folder_array = prefix.split("/")
@@ -61,7 +67,7 @@ def get_cascading_dir_children(event, context):
             "folders": folders
         })
 
-    return get_return_block_with_cors({"data": ret})
+    return {"data": ret}
 
 
 # NOT a lambda handler ... probably
@@ -102,21 +108,26 @@ def get_folder_content(
     return (files, folders)
 
 
-def get_signed_urls_in_folder(event, context):
+def get_signed_urls_in_folder(
+    event: dict,
+    context
+):
     """Get all signed urls in a folder."""
-    body = json.loads(event["body"])
-    bucket_name = body["bucket_name"]
-    folder_name = body["folder_name"]
+    print(event)
+    bucket_name = event["bucket_name"]
+    folder_name = event["folder_name"]
     urls = get_all_signed_urls_in_folder(bucket_name, folder_name)
     print(urls)
-    return get_return_block_with_cors({"urls": urls})
+    return {"urls": urls}
 
 
-def get_base64_images_in_folder(event, context):
+def get_base64_images_in_folder(
+    event: dict,
+    context
+):
     """Get all base64 images in a folder."""
-    body = json.loads(event["body"])
-    bucket_name = body["bucket_name"]
-    folder_name = body["folder_name"]
+    bucket_name = event["bucket_name"]
+    folder_name = event["folder_name"]
     keys = get_all_subfolder_keys(bucket_name, folder_name)
     s3 = boto3.client("s3")
     images = {}
@@ -125,43 +136,49 @@ def get_base64_images_in_folder(event, context):
         response = s3.get_object(Bucket=bucket_name, Key=key)
         image = base64.b64encode(response["Body"].read()).decode("utf-8")
         images[image_name] = "data:image/png;base64," + image
-    return get_return_block_with_cors({"images": images})
+    return {"images": images}
 
     
-def load_image(event, context):
+def load_image(
+    event: dict,
+    context
+):
     """Get a single signed url."""
-    body = json.loads(event["body"])
-    bucket_name = body["bucket_name"]
-    file_name = body["file_name"]
+    bucket_name = event["bucket_name"]
+    file_name = event["file_name"]
     folder_path, image_name = os.path.split(file_name)
     url = get_signed_url(bucket_name, folder_path, image_name, s3_client=None)
-    return get_return_block_with_cors({"url": url})
+    return {"url": url}
 
 
-def save_labels(event, context):
+def save_labels(
+    event: dict,
+    context
+):
     """Save json data to s3 path."""
-    body = json.loads(event["body"])
-    labels = body["labels"]
-    bucket_name = body["bucket_name"]
-    file_name = body["file_name"]
+    labels = event["labels"]
+    bucket_name = event["bucket_name"]
+    file_name = event["file_name"]
     try:
         s3 = boto3.resource('s3')
         s3object = s3.Object(bucket_name, file_name)
         s3object.put(
             Body=(bytes(json.dumps(labels).encode('UTF-8')))
         )
-        return get_return_block_with_cors("Labels saved.", False)
+        return "Labels saved."
     except Exception:
-        return get_return_block_with_cors("Error saving labels.", False)
+        return "Error saving labels."
 
 
-def save_image(event, context):
+def save_image(
+    event: dict,
+    context
+):
     """Save image to an s3 path."""
-    body = json.loads(event["body"])
-    image_string = body["image"]
+    image_string = event["image"]
     decoded = base64.b64decode(image_string.split(",")[1])
-    bucket_name = body["bucket_name"]
-    file_name = body["file_name"]
+    bucket_name = event["bucket_name"]
+    file_name = event["file_name"]
 
     try:
         s3 = boto3.resource('s3')
@@ -169,23 +186,25 @@ def save_image(event, context):
         s3object.put(
             Body=decoded
         )
-        return get_return_block_with_cors("Image saved.", False)
+        return "Image saved."
     except Exception:
-        return get_return_block_with_cors("Error saving image.", False)
+        return "Error saving image."
 
 
-def load_labels(event, context):
+def load_labels(
+    event: dict,
+    context
+):
     """Load json data from an s3 path."""
     print(event)
-    body = json.loads(event["body"])
-    bucket_name = body["bucket_name"]
-    file_name = body["file_name"]
+    bucket_name = event["bucket_name"]
+    file_name = event["file_name"]
     
     s3 = boto3.resource('s3')
     content_object = s3.Object(bucket_name, file_name)
     file_content = content_object.get()['Body'].read().decode('utf-8')
     labels = json.loads(file_content)
-    return get_return_block_with_cors({"labels": labels})
+    return {"labels": labels}
 
 
 if __name__ == "__main__":
